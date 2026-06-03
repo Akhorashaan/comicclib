@@ -1,0 +1,33 @@
+services:
+  app:
+    build: .
+    image: comic-board
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      # Required — fail fast if not set (put them in .env next to this file).
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env}
+      # adapter-node needs the public origin for CSRF/form posts to work.
+      ORIGIN: ${ORIGIN:-http://localhost:3000}
+      # Allow cover uploads (default adapter-node limit is 512K). Covers are resized server-side.
+      BODY_SIZE_LIMIT: ${BODY_SIZE_LIMIT:-8M}
+      # Behind a reverse proxy set ADDRESS_HEADER=X-Forwarded-For so the real client IP
+      # reaches analytics + login brute-force protection. Empty = use socket address.
+      ADDRESS_HEADER: ${ADDRESS_HEADER:-}
+      XFF_DEPTH: ${XFF_DEPTH:-1}
+      DATA_DIR: /data
+    volumes:
+      - comic_data:/data
+    # Tuned for a small server. Raise if image processing needs more headroom.
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  comic_data:
