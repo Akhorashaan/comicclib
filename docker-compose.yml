@@ -1,3 +1,5 @@
+name: longbox
+
 services:
   app:
     build: .

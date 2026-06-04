@@ -9,6 +9,40 @@
 
 	const singles = $derived(series.issues.filter((i) => i.kind === 'issue'));
 	const volumes = $derived(series.issues.filter((i) => i.kind === 'volume'));
+
+	let copied = $state(false);
+
+	async function copyLink() {
+		const url = `${location.origin}/series/${series.slug}`;
+		let ok = false;
+		try {
+			if (navigator.clipboard && window.isSecureContext) {
+				await navigator.clipboard.writeText(url);
+				ok = true;
+			}
+		} catch {
+			ok = false;
+		}
+		if (!ok) {
+			// Fallback for non-secure contexts (plain HTTP deployments).
+			const ta = document.createElement('textarea');
+			ta.value = url;
+			ta.style.position = 'fixed';
+			ta.style.opacity = '0';
+			document.body.appendChild(ta);
+			ta.select();
+			try {
+				ok = document.execCommand('copy');
+			} catch {
+				ok = false;
+			}
+			document.body.removeChild(ta);
+		}
+		if (ok) {
+			copied = true;
+			setTimeout(() => (copied = false), 1500);
+		}
+	}
 </script>
 
 {#snippet releaseRow(issue: SeriesDetail['issues'][number])}
@@ -50,6 +84,14 @@
 			<h1 class="text-2xl font-bold text-slate-50">{series.title}</h1>
 			<StatusBadge status={series.status} />
 			{#if series.year}<span class="text-sm text-slate-400">{series.year}</span>{/if}
+			<button
+				type="button"
+				onclick={copyLink}
+				class="ml-auto inline-flex items-center gap-1 rounded-md border border-surface-border px-2 py-1 text-xs text-slate-300 hover:border-indigo-400 hover:text-indigo-300"
+				title="Скопировать прямую ссылку на страницу серии"
+			>
+				{copied ? '✓ Скопировано' : '🔗 Ссылка'}
+			</button>
 		</div>
 		{#if series.titleOriginal}
 			<p class="mt-0.5 text-base italic text-slate-400">{series.titleOriginal}</p>

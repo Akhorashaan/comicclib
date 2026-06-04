@@ -73,18 +73,6 @@
 		</select>
 	</div>
 
-	{#if options.universes.length}
-		<div>
-			<label class="mb-1 block text-xs text-slate-400" for="f-universe">Вселенная</label>
-			<select id="f-universe" class="input min-w-[150px]" value={params.get('universe') ?? ''} onchange={(e) => setParam('universe', e.currentTarget.value)}>
-				<option value="">Все</option>
-				{#each options.universes as u}
-					<option value={u.slug}>{u.name}</option>
-				{/each}
-			</select>
-		</div>
-	{/if}
-
 	<div>
 		<label class="mb-1 block text-xs text-slate-400" for="f-sort">Сортировка</label>
 		<select id="f-sort" class="input min-w-[150px]" value={params.get('sort') ?? 'recent'} onchange={(e) => setParam('sort', e.currentTarget.value === 'recent' ? '' : e.currentTarget.value)}>
@@ -101,12 +89,22 @@
 	{/if}
 </div>
 
-{#if params.get('author')}
-	<div class="mt-2 flex items-center gap-2 text-sm text-slate-400">
-		<span>Автор:</span>
-		<span class="chip border-indigo-500/40 bg-indigo-500/10 text-indigo-300">
-			{options.authors.find((a) => a.slug === params.get('author'))?.name ?? params.get('author')}
-			<button class="ml-1 text-slate-400 hover:text-white" onclick={() => setParam('author', '')}>✕</button>
-		</span>
+<!-- Контекстные фильтры: появляются только когда выбраны через карточку серии. -->
+{#if params.get('universe') || params.get('author')}
+	<div class="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-400">
+		{#if params.get('universe')}
+			<span>Вселенная:</span>
+			<span class="chip border-violet-500/40 bg-violet-500/10 text-violet-300">
+				🌐 {options.universes.find((u) => u.slug === params.get('universe'))?.name ?? params.get('universe')}
+				<button class="ml-1 text-slate-400 hover:text-white" onclick={() => setParam('universe', '')}>✕</button>
+			</span>
+		{/if}
+		{#if params.get('author')}
+			<span>Автор:</span>
+			<span class="chip border-indigo-500/40 bg-indigo-500/10 text-indigo-300">
+				{options.authors.find((a) => a.slug === params.get('author'))?.name ?? params.get('author')}
+				<button class="ml-1 text-slate-400 hover:text-white" onclick={() => setParam('author', '')}>✕</button>
+			</span>
+		{/if}
 	</div>
 {/if}

@@ -6,16 +6,14 @@
 
 ## 1. Требования
 
-- Linux-сервер (1 vCPU / 1 ГБ RAM достаточно).
-- Установленные **Docker** и **Docker Compose v2** (`docker --version`, `docker compose version`).
+- Linux-сервер (1 vCPU / 1 ГБ RAM достаточно). **Docker и Docker Compose v2 уже установлены.**
 - Домен, указывающий A/AAAA-записью на IP сервера (напр. `comics.example.com`).
 - Открытые порты **80** и **443** (для прокси с TLS). Сам контейнер наружу публиковать не нужно.
 
-Установка Docker (Debian/Ubuntu), если ещё нет:
+Быстрая проверка инструментов:
 
 ```bash
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER   # затем перелогиньтесь
+docker --version && docker compose version
 ```
 
 ---
@@ -23,9 +21,11 @@ sudo usermod -aG docker $USER   # затем перелогиньтесь
 ## 2. Получить код на сервер
 
 ```bash
-git clone <repo-url> longbox && cd longbox
-# либо скопировать проект: scp -r ./longbox user@server:/opt/longbox
+git clone https://github.com/Akhorashaan/comicclib.git
+cd comicclib
 ```
+
+Обновление в будущем — `git pull` в этом же каталоге (см. п.7).
 
 ---
 
@@ -186,7 +186,7 @@ XFF_DEPTH=1
 ## 7. Обновление версии
 
 ```bash
-cd /opt/longbox
+cd comicclib
 git pull
 docker compose up -d --build
 ```
@@ -197,24 +197,35 @@ docker compose up -d --build
 
 ## 8. Резервное копирование
 
-Все данные (БД + загруженные обложки) лежат в Docker-volume `comic_data` (внутри — `/data/comics.sqlite` и `/data/covers`).
+Все данные (БД + загруженные обложки) лежат в Docker-volume **`longbox_comic_data`** (внутри — `/data/comics.sqlite` и `/data/covers`). Compose-проект назван `longbox`, поэтому имена детерминированы: контейнер `longbox-app-1`, volume `longbox_comic_data`.
 
-Бэкап БД на лету (WAL-безопасно):
+**Способ 1 — архив всего тома (с кратким простоем, самый надёжный):**
 
 ```bash
-docker compose exec app sh -c "sqlite3 /data/comics.sqlite \".backup '/data/backup-$(date +%F).sqlite'\""
-docker compose cp app:/data/backup-$(date +%F).sqlite ./backup-$(date +%F).sqlite
+docker compose stop app
+docker run --rm -v longbox_comic_data:/data -v "$PWD":/backup alpine \
+  tar czf /backup/longbox-data-$(date +%F).tar.gz -C /data .
+docker compose start app
 ```
 
-> Если в образе нет `sqlite3`, проще скопировать весь каталог данных при остановленном контейнере:
-> ```bash
-> docker compose stop app
-> docker run --rm -v comicboard_comic_data:/data -v "$PWD":/backup alpine \
->   tar czf /backup/longbox-data-$(date +%F).tar.gz -C /data .
-> docker compose start app
-> ```
+**Способ 2 — без простоя (чекпойнт WAL средствами приложения, затем копия файла):**
 
-Восстановление — распаковать архив обратно в volume.
+```bash
+docker compose exec app node -e "new (require('better-sqlite3'))('/data/comics.sqlite').pragma('wal_checkpoint(TRUNCATE)')"
+docker compose cp app:/data/comics.sqlite ./comics-$(date +%F).sqlite
+docker compose cp app:/data/covers ./covers-$(date +%F)
+```
+
+**Восстановление** (Способ 1): остановить контейнер и распаковать архив обратно в том:
+
+```bash
+docker compose stop app
+docker run --rm -v longbox_comic_data:/data -v "$PWD":/backup alpine \
+  sh -c "rm -rf /data/* && tar xzf /backup/longbox-data-ГГГГ-ММ-ДД.tar.gz -C /data"
+docker compose start app
+```
+
+> Регулярный бэкап удобно повесить на `cron` (Способ 1) и складывать архивы вне сервера.
 
 ---
 
