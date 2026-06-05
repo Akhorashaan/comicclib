@@ -98,8 +98,12 @@ export function deleteSeries(id: number) {
 	const row = db.prepare('SELECT cover_path AS coverPath FROM series WHERE id = ?').get(id) as
 		| { coverPath: string | null }
 		| undefined;
-	db.prepare('DELETE FROM series WHERE id = ?').run(id); // cascades to issues/authors/genres
+	const issueCovers = db
+		.prepare('SELECT cover_path AS c FROM issues WHERE series_id = ? AND cover_path IS NOT NULL')
+		.all(id) as { c: string }[];
+	db.prepare('DELETE FROM series WHERE id = ?').run(id); // cascades to issues/authors
 	if (row?.coverPath) void deleteCover(row.coverPath);
+	for (const r of issueCovers) void deleteCover(r.c);
 }
 
 export interface IssueInput {
@@ -107,6 +111,7 @@ export interface IssueInput {
 	number: string;
 	title: string;
 	collects: string | null;
+	coverPath?: string | null; // undefined = keep, null = clear, string = replace
 	downloadUrl: string;
 }
 
@@ -119,8 +124,8 @@ function sortIndexOf(number: string): number {
 export function addIssue(seriesId: number, input: IssueInput): number {
 	const info = db
 		.prepare(
-			`INSERT INTO issues (series_id, kind, number, title, collects, download_url, sort_index)
-			VALUES (?, ?, ?, ?, ?, ?, ?)`
+			`INSERT INTO issues (series_id, kind, number, title, collects, cover_path, download_url, sort_index)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.run(
 			seriesId,
@@ -128,6 +133,7 @@ export function addIssue(seriesId: number, input: IssueInput): number {
 			input.number,
 			input.title,
 			input.collects,
+			input.coverPath ?? null,
 			input.downloadUrl,
 			sortIndexOf(input.number)
 		);
@@ -136,13 +142,36 @@ export function addIssue(seriesId: number, input: IssueInput): number {
 }
 
 export function updateIssue(id: number, input: IssueInput) {
+	if (input.coverPath === undefined) {
+		db.prepare(
+			`UPDATE issues SET kind=?, number=?, title=?, collects=?, download_url=?, sort_index=? WHERE id=?`
+		).run(input.kind, input.number, input.title, input.collects, input.downloadUrl, sortIndexOf(input.number), id);
+		return;
+	}
+	const old = db.prepare('SELECT cover_path AS c FROM issues WHERE id = ?').get(id) as
+		| { c: string | null }
+		| undefined;
 	db.prepare(
-		`UPDATE issues SET kind=?, number=?, title=?, collects=?, download_url=?, sort_index=? WHERE id=?`
-	).run(input.kind, input.number, input.title, input.collects, input.downloadUrl, sortIndexOf(input.number), id);
+		`UPDATE issues SET kind=?, number=?, title=?, collects=?, cover_path=?, download_url=?, sort_index=? WHERE id=?`
+	).run(
+		input.kind,
+		input.number,
+		input.title,
+		input.collects,
+		input.coverPath,
+		input.downloadUrl,
+		sortIndexOf(input.number),
+		id
+	);
+	if (old?.c && old.c !== input.coverPath) void deleteCover(old.c);
 }
 
 export function deleteIssue(id: number) {
+	const row = db.prepare('SELECT cover_path AS c FROM issues WHERE id = ?').get(id) as
+		| { c: string | null }
+		| undefined;
 	db.prepare('DELETE FROM issues WHERE id = ?').run(id);
+	if (row?.c) void deleteCover(row.c);
 }
 
 // ---- Taxonomy management ----

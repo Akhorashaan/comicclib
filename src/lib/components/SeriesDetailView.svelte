@@ -9,6 +9,7 @@
 
 	const singles = $derived(series.issues.filter((i) => i.kind === 'issue'));
 	const volumes = $derived(series.issues.filter((i) => i.kind === 'volume'));
+	const oneshots = $derived(series.issues.filter((i) => i.kind === 'oneshot'));
 
 	let copied = $state(false);
 
@@ -45,26 +46,42 @@
 	}
 </script>
 
-{#snippet releaseRow(issue: SeriesDetail['issues'][number])}
-	<li class="flex items-center justify-between gap-3 bg-surface-raised px-3 py-2">
-		<div class="min-w-0">
-			<span class="font-medium text-slate-200">
-				{issue.kind === 'volume' ? `Том ${issue.number}` : `#${issue.number}`}
-			</span>
-			{#if issue.title}<span class="ml-2 truncate text-sm text-slate-400">{issue.title}</span>{/if}
-			{#if issue.kind === 'volume' && issue.collects}
-				<span class="ml-2 text-xs text-slate-500">собирает {issue.collects}</span>
-			{/if}
+{#snippet releaseTile(issue: SeriesDetail['issues'][number])}
+	{@const label =
+		issue.kind === 'volume'
+			? `Том ${issue.number}`
+			: issue.kind === 'oneshot'
+				? 'Ваншот'
+				: `#${issue.number}`}
+	<a
+		href="/api/dl/{issue.id}"
+		rel="nofollow noopener"
+		data-sveltekit-reload
+		class="group block"
+		title="Скачать — {label}"
+	>
+		<div class="relative aspect-[2/3] overflow-hidden rounded-lg border border-surface-border bg-surface-raised">
+			<LazyImg path={issue.coverPath} alt={label} class="transition duration-300 group-hover:scale-[1.04]" />
+			<div class="absolute left-1.5 top-1.5 rounded bg-black/65 px-1.5 py-0.5 text-[11px] font-medium text-slate-100 backdrop-blur">
+				{label}
+			</div>
+			<div class="absolute inset-0 flex items-center justify-center opacity-0 transition group-hover:opacity-100">
+				<span class="rounded-md bg-indigo-600/90 px-2.5 py-1 text-xs font-medium text-white">⬇ Скачать</span>
+			</div>
 		</div>
-		<a
-			class="btn-primary shrink-0"
-			href="/api/dl/{issue.id}"
-			rel="nofollow noopener"
-			data-sveltekit-reload
-		>
-			Скачать
-		</a>
-	</li>
+		{#if issue.title}
+			<div class="mt-1 truncate text-center text-xs text-slate-300" title={issue.title}>{issue.title}</div>
+		{/if}
+		{#if issue.kind === 'volume' && issue.collects}
+			<div class="truncate text-center text-[11px] text-slate-500">{issue.collects}</div>
+		{/if}
+	</a>
+{/snippet}
+
+{#snippet releaseGallery(items: SeriesDetail['issues'])}
+	<div class="mt-2 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
+		{#each items as issue (issue.id)}{@render releaseTile(issue)}{/each}
+	</div>
 {/snippet}
 
 <article class="grid gap-6 md:grid-cols-[220px_1fr]">
@@ -80,14 +97,14 @@
 	</div>
 
 	<div>
-		<div class="flex flex-wrap items-center gap-3">
+		<div class="flex flex-wrap items-center gap-3 pr-10">
 			<h1 class="text-2xl font-bold text-slate-50">{series.title}</h1>
 			<StatusBadge status={series.status} />
 			{#if series.year}<span class="text-sm text-slate-400">{series.year}</span>{/if}
 			<button
 				type="button"
 				onclick={copyLink}
-				class="ml-auto inline-flex items-center gap-1 rounded-md border border-surface-border px-2 py-1 text-xs text-slate-300 hover:border-indigo-400 hover:text-indigo-300"
+				class="inline-flex items-center gap-1 rounded-md border border-surface-border px-2 py-1 text-xs text-slate-300 hover:border-indigo-400 hover:text-indigo-300"
 				title="Скопировать прямую ссылку на страницу серии"
 			>
 				{copied ? '✓ Скопировано' : '🔗 Ссылка'}
@@ -127,22 +144,25 @@
 			<p class="mt-4 whitespace-pre-line text-sm leading-relaxed text-slate-300">{series.description}</p>
 		{/if}
 
-		{#if singles.length}
-			<h2 class="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-400">
-				Выпуски ({singles.length})
-			</h2>
-			<ul class="mt-2 divide-y divide-surface-border overflow-hidden rounded-lg border border-surface-border">
-				{#each singles as issue (issue.id)}{@render releaseRow(issue)}{/each}
-			</ul>
-		{/if}
-
 		{#if volumes.length}
 			<h2 class="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-400">
 				Тома ({volumes.length})
 			</h2>
-			<ul class="mt-2 divide-y divide-surface-border overflow-hidden rounded-lg border border-surface-border">
-				{#each volumes as issue (issue.id)}{@render releaseRow(issue)}{/each}
-			</ul>
+			{@render releaseGallery(volumes)}
+		{/if}
+
+		{#if singles.length}
+			<h2 class="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-400">
+				Выпуски ({singles.length})
+			</h2>
+			{@render releaseGallery(singles)}
+		{/if}
+
+		{#if oneshots.length}
+			<h2 class="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-400">
+				{oneshots.length > 1 ? `Ваншоты (${oneshots.length})` : 'Ваншот'}
+			</h2>
+			{@render releaseGallery(oneshots)}
 		{/if}
 
 		{#if !series.issues.length}

@@ -30,12 +30,13 @@ export const ROLE_LABELS: Record<AuthorRole, string> = {
 	letterer: 'Леттеринг'
 };
 
-export const RELEASE_KINDS = ['issue', 'volume'] as const;
+export const RELEASE_KINDS = ['issue', 'volume', 'oneshot'] as const;
 export type ReleaseKind = (typeof RELEASE_KINDS)[number];
 
 export const RELEASE_KIND_LABELS: Record<ReleaseKind, string> = {
 	issue: 'Выпуск',
-	volume: 'Том'
+	volume: 'Том',
+	oneshot: 'Ваншот'
 };
 
 export const PAGE_SIZE = 24;

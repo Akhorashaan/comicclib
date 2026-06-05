@@ -9,12 +9,15 @@
 		publishers = [],
 		universeOptions = [],
 		authorOptions = [],
+		action = '',
 		error = null
 	}: {
 		series?: SeriesDetail | null;
 		publishers?: { name: string }[];
 		universeOptions?: { name: string }[];
 		authorOptions?: { name: string }[];
+		/** Form action target. Empty = page default action (used on the "new" page). */
+		action?: string;
 		error?: string | null;
 	} = $props();
 
@@ -36,6 +39,7 @@
 
 <form
 	method="POST"
+	action={action}
 	enctype="multipart/form-data"
 	use:enhance={() => {
 		submitting = true;

@@ -23,8 +23,14 @@ export const load: PageServerLoad = ({ params }) => {
 	return { series, ...nameOptions() };
 };
 
+function validateIssue(input: { kind: string; number: string; downloadUrl: string }): string | null {
+	if (!input.downloadUrl) return 'Нужна ссылка на скачивание.';
+	if (input.kind !== 'oneshot' && !input.number) return 'Нужен номер релиза.';
+	return null;
+}
+
 export const actions: Actions = {
-	default: async ({ request, params }) => {
+	saveSeries: async ({ request, params }) => {
 		const id = requireId(params);
 		const input = await parseSeriesForm(await request.formData());
 		if (!input.title) return fail(400, { error: 'Укажите название.' });
@@ -34,10 +40,9 @@ export const actions: Actions = {
 
 	addIssue: async ({ request, params }) => {
 		const id = requireId(params);
-		const input = parseIssueForm(await request.formData());
-		if (!input.number || !input.downloadUrl) {
-			return fail(400, { issueError: 'Нужны номер выпуска и ссылка на скачивание.' });
-		}
+		const input = await parseIssueForm(await request.formData());
+		const err = validateIssue(input);
+		if (err) return fail(400, { issueError: err });
 		addIssue(id, input);
 		return { issueSaved: true };
 	},
@@ -46,10 +51,9 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const issueId = Number(data.get('issueId'));
 		if (!Number.isInteger(issueId)) return fail(400, { issueError: 'Bad issue id' });
-		const input = parseIssueForm(data);
-		if (!input.number || !input.downloadUrl) {
-			return fail(400, { issueError: 'Нужны номер выпуска и ссылка.' });
-		}
+		const input = await parseIssueForm(data);
+		const err = validateIssue(input);
+		if (err) return fail(400, { issueError: err });
 		updateIssue(issueId, input);
 		return { issueSaved: true };
 	},

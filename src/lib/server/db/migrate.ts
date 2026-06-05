@@ -26,6 +26,7 @@ export function applySchema(sqlite: Database) {
 	addColumnIfMissing(sqlite, 'series', 'universe_id', `universe_id INTEGER REFERENCES universes(id)`);
 	addColumnIfMissing(sqlite, 'issues', 'kind', `kind TEXT NOT NULL DEFAULT 'issue'`);
 	addColumnIfMissing(sqlite, 'issues', 'collects', `collects TEXT`);
+	addColumnIfMissing(sqlite, 'issues', 'cover_path', `cover_path TEXT`);
 
 	// Indexes on migrated columns — created here, after the columns exist.
 	sqlite.exec(`

@@ -13,6 +13,19 @@ export function visitorId(ip: string | null, ua: string | null): string {
 		.slice(0, 16);
 }
 
+// IPs whose views/downloads are never counted (e.g. the site owner). Comma/space separated.
+const EXCLUDED_IPS = new Set(
+	(process.env.ANALYTICS_EXCLUDE_IPS ?? '')
+		.split(/[\s,]+/)
+		.map((s) => s.trim())
+		.filter(Boolean)
+);
+
+/** True if events from this IP should be skipped. */
+export function isExcludedIp(ip: string | null): boolean {
+	return ip != null && EXCLUDED_IPS.has(ip);
+}
+
 const insertEvent = db.prepare(
 	`INSERT INTO events (type, series_id, issue_id, visitor, referrer) VALUES (?, ?, ?, ?, ?)`
 );

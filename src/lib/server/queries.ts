@@ -24,6 +24,7 @@ export interface IssueRow {
 	number: string;
 	title: string;
 	collects: string | null;
+	coverPath: string | null;
 	downloadUrl: string;
 }
 
@@ -182,7 +183,7 @@ export function getSeriesDetail(slug: string): SeriesDetail | null {
 
 	const issues = db
 		.prepare(
-			`SELECT id, kind, number, title, collects, download_url AS downloadUrl
+			`SELECT id, kind, number, title, collects, cover_path AS coverPath, download_url AS downloadUrl
 			FROM issues WHERE series_id = ? ORDER BY kind ASC, sort_index ASC, id ASC`
 		)
 		.all(row.id) as IssueRow[];

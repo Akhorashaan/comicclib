@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS issues (
 	number       TEXT NOT NULL,                 -- "1", "0", "Annual 2024" — kept as text
 	title        TEXT NOT NULL DEFAULT '',
 	collects     TEXT,                          -- for volumes: which issues it collects, e.g. "#1–6"
+	cover_path   TEXT,                          -- per-release cover (filename under DATA_DIR/covers)
 	download_url TEXT NOT NULL,
 	sort_index   REAL NOT NULL DEFAULT 0,       -- numeric ordering helper
 	created_at   TEXT NOT NULL DEFAULT (datetime('now'))

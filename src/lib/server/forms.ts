@@ -56,12 +56,22 @@ function asKind(v: FormDataEntryValue | null): ReleaseKind {
 	return (RELEASE_KINDS as readonly string[]).includes(s) ? (s as ReleaseKind) : 'issue';
 }
 
-export function parseIssueForm(data: FormData): IssueInput {
+export async function parseIssueForm(data: FormData): Promise<IssueInput> {
+	// Cover: a new upload overrides; "removeCover" clears; otherwise keep (undefined).
+	let coverPath: string | null | undefined = undefined;
+	const file = data.get('cover');
+	if (file instanceof File && file.size > 0) {
+		coverPath = await saveCover(Buffer.from(await file.arrayBuffer()));
+	} else if (data.get('removeCover')) {
+		coverPath = null;
+	}
+
 	return {
 		kind: asKind(data.get('kind')),
 		number: String(data.get('number') ?? '').trim(),
 		title: String(data.get('title') ?? '').trim(),
 		collects: String(data.get('collects') ?? '').trim() || null,
+		coverPath,
 		downloadUrl: String(data.get('downloadUrl') ?? '').trim()
 	};
 }

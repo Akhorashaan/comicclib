@@ -19,6 +19,8 @@ services:
       # reaches analytics + login brute-force protection. Empty = use socket address.
       ADDRESS_HEADER: ${ADDRESS_HEADER:-}
       XFF_DEPTH: ${XFF_DEPTH:-1}
+      # IPs whose views/downloads are never counted (owner). Comma/space separated.
+      ANALYTICS_EXCLUDE_IPS: ${ANALYTICS_EXCLUDE_IPS:-}
       DATA_DIR: /data
     volumes:
       - comic_data:/data
