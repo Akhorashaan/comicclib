@@ -16,6 +16,12 @@ export function formatSize(bytes: number | null | undefined): string {
 	return `${n.toFixed(n < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
 }
 
+/** Format a stored UTC timestamp ("YYYY-MM-DD HH:MM:SS") as "DD.MM.YYYY HH:MM". */
+export function formatDateTime(s: string | null | undefined): string {
+	const m = s?.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+	return m ? `${m[3]}.${m[2]}.${m[1]} ${m[4]}:${m[5]}` : (s ?? '');
+}
+
 /** Compact number, e.g. 1.2k. */
 export function compact(n: number): string {
 	if (n < 1000) return String(n);

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { SeriesDetail } from '$lib/server/queries';
 	import { ROLE_LABELS } from '$lib/constants';
-	import { compact } from '$lib/format';
+	import { compact, formatDateTime } from '$lib/format';
 	import LazyImg from './LazyImg.svelte';
 	import StatusBadge from './StatusBadge.svelte';
 
@@ -11,38 +11,42 @@
 	const volumes = $derived(series.issues.filter((i) => i.kind === 'volume'));
 	const oneshots = $derived(series.issues.filter((i) => i.kind === 'oneshot'));
 
-	let copied = $state(false);
+	// Comments: seeded from the loaded series, updated locally after posting.
+	let comments = $state(series.comments);
+	let cAuthor = $state('');
+	let cBody = $state('');
+	let cPosting = $state(false);
+	let cError = $state('');
 
-	async function copyLink() {
-		const url = `${location.origin}/series/${series.slug}`;
-		let ok = false;
+	// Re-sync when a different series is shown (e.g. reopening the modal).
+	$effect(() => {
+		comments = series.comments;
+	});
+
+	async function submitComment(e: SubmitEvent) {
+		e.preventDefault();
+		const body = cBody.trim();
+		if (!body || cPosting) return;
+		cPosting = true;
+		cError = '';
 		try {
-			if (navigator.clipboard && window.isSecureContext) {
-				await navigator.clipboard.writeText(url);
-				ok = true;
+			const res = await fetch(`/api/series/${series.id}/comments`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ author: cAuthor.trim(), body })
+			});
+			if (res.ok) {
+				const data = await res.json();
+				comments = [data.comment, ...comments];
+				cBody = '';
+			} else {
+				const data = await res.json().catch(() => null);
+				cError = data?.message ?? 'Не удалось отправить комментарий';
 			}
 		} catch {
-			ok = false;
+			cError = 'Не удалось отправить комментарий';
 		}
-		if (!ok) {
-			// Fallback for non-secure contexts (plain HTTP deployments).
-			const ta = document.createElement('textarea');
-			ta.value = url;
-			ta.style.position = 'fixed';
-			ta.style.opacity = '0';
-			document.body.appendChild(ta);
-			ta.select();
-			try {
-				ok = document.execCommand('copy');
-			} catch {
-				ok = false;
-			}
-			document.body.removeChild(ta);
-		}
-		if (ok) {
-			copied = true;
-			setTimeout(() => (copied = false), 1500);
-		}
+		cPosting = false;
 	}
 </script>
 
@@ -101,14 +105,6 @@
 			<h1 class="text-2xl font-bold text-slate-50">{series.title}</h1>
 			<StatusBadge status={series.status} />
 			{#if series.year}<span class="text-sm text-slate-400">{series.year}</span>{/if}
-			<button
-				type="button"
-				onclick={copyLink}
-				class="inline-flex items-center gap-1 rounded-md border border-surface-border px-2 py-1 text-xs text-slate-300 hover:border-indigo-400 hover:text-indigo-300"
-				title="Скопировать прямую ссылку на страницу серии"
-			>
-				{copied ? '✓ Скопировано' : '🔗 Ссылка'}
-			</button>
 		</div>
 		{#if series.titleOriginal}
 			<p class="mt-0.5 text-base italic text-slate-400">{series.titleOriginal}</p>
@@ -159,15 +155,62 @@
 		{/if}
 
 		{#if oneshots.length}
-			<h2 class="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-400">
-				{oneshots.length > 1 ? `Ваншоты (${oneshots.length})` : 'Ваншот'}
-			</h2>
-			{@render releaseGallery(oneshots)}
+			<div class="mt-6 flex flex-wrap gap-2">
+				{#each oneshots as o (o.id)}
+					<a class="btn-primary" href="/api/dl/{o.id}" rel="nofollow noopener" data-sveltekit-reload>
+						⬇ Скачать
+					</a>
+				{/each}
+			</div>
 		{/if}
 
 		{#if !series.issues.length}
 			<h2 class="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-400">Релизы</h2>
 			<p class="mt-2 text-sm text-slate-500">Релизы ещё не добавлены.</p>
+		{/if}
+
+		<!-- Comments -->
+		<h2 class="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-400">
+			Комментарии ({comments.length})
+		</h2>
+
+		<form onsubmit={submitComment} class="mt-2 space-y-2">
+			<input
+				class="input"
+				type="text"
+				bind:value={cAuthor}
+				maxlength="60"
+				placeholder="Имя (необязательно)"
+			/>
+			<textarea
+				class="input min-h-20"
+				bind:value={cBody}
+				maxlength="2000"
+				required
+				placeholder="Оставить комментарий…"
+			></textarea>
+			{#if cError}<p class="text-sm text-rose-400">{cError}</p>{/if}
+			<div class="flex justify-end">
+				<button class="btn-primary" type="submit" disabled={cPosting || !cBody.trim()}>
+					{cPosting ? 'Отправка…' : 'Отправить'}
+				</button>
+			</div>
+		</form>
+
+		{#if comments.length}
+			<ul class="mt-3 space-y-3">
+				{#each comments as c (c.id)}
+					<li class="rounded-lg border border-surface-border bg-surface-raised p-3">
+						<div class="mb-1 flex items-center gap-2 text-xs">
+							<span class="font-medium text-slate-300">{c.author || 'Аноним'}</span>
+							<span class="text-slate-600">{formatDateTime(c.createdAt)}</span>
+						</div>
+						<p class="whitespace-pre-line break-words text-sm text-slate-300">{c.body}</p>
+					</li>
+				{/each}
+			</ul>
+		{:else}
+			<p class="mt-2 text-sm text-slate-500">Пока нет комментариев. Будьте первым!</p>
 		{/if}
 	</div>
 </article>

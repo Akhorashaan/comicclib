@@ -1,4 +1,5 @@
 import { db } from './db';
+import { listCommentsForSeries, type CommentRow } from './comments';
 import { PAGE_SIZE, type Sort, type Status, type AuthorRole, type ReleaseKind } from '$lib/constants';
 
 export interface SeriesCard {
@@ -41,6 +42,7 @@ export interface SeriesDetail {
 	universe: { name: string; slug: string } | null;
 	authors: { name: string; slug: string; role: AuthorRole }[];
 	issues: IssueRow[];
+	comments: CommentRow[];
 	views: number;
 	downloads: number;
 }
@@ -209,6 +211,7 @@ export function getSeriesDetail(slug: string): SeriesDetail | null {
 		universe: row.universeSlug ? { name: row.universeName!, slug: row.universeSlug } : null,
 		authors,
 		issues,
+		comments: listCommentsForSeries(row.id),
 		views: counts.views,
 		downloads: counts.downloads
 	};

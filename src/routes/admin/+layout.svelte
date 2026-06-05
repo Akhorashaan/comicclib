@@ -6,6 +6,7 @@
 	const nav = [
 		{ href: '/admin', label: 'Дашборд' },
 		{ href: '/admin/series', label: 'Серии' },
+		{ href: '/admin/comments', label: 'Комментарии' },
 		{ href: '/admin/meta', label: 'Справочники' },
 		{ href: '/admin/stats', label: 'Аналитика' }
 	];

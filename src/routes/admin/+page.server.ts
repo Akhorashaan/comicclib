@@ -1,9 +1,11 @@
 import { getOverview } from '$lib/server/analytics';
+import { commentCount } from '$lib/server/comments';
 import { db } from '$lib/server/db';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = () => {
 	const overview = getOverview(30);
+	const comments = commentCount();
 	const recent = db
 		.prepare(
 			`SELECT id, title, slug, status, updated_at AS updatedAt,
@@ -18,5 +20,5 @@ export const load: PageServerLoad = () => {
 		updatedAt: string;
 		issueCount: number;
 	}[];
-	return { overview, recent };
+	return { overview, comments, recent };
 };

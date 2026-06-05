@@ -60,6 +60,18 @@ CREATE TABLE IF NOT EXISTS issues (
 );
 -- idx_issues_series is created in migrate.ts (kind may be a migrated column).
 
+-- Anonymous comments on a series (no registration).
+CREATE TABLE IF NOT EXISTS comments (
+	id         INTEGER PRIMARY KEY AUTOINCREMENT,
+	series_id  INTEGER NOT NULL REFERENCES series(id) ON DELETE CASCADE,
+	author     TEXT NOT NULL DEFAULT '',   -- optional display name
+	body       TEXT NOT NULL,
+	visitor    TEXT,                        -- hashed ip+ua, for abuse handling
+	created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_comments_series ON comments(series_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_comments_created ON comments(created_at);
+
 -- Analytics: append-only event log.
 CREATE TABLE IF NOT EXISTS events (
 	id         INTEGER PRIMARY KEY AUTOINCREMENT,

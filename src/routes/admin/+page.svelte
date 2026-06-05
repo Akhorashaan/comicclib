@@ -10,7 +10,8 @@
 		{ label: 'Скачивания (30 дн.)', value: data.overview.downloads },
 		{ label: 'Уник. посетители', value: data.overview.uniqueVisitors },
 		{ label: 'Серий', value: data.overview.seriesCount },
-		{ label: 'Выпусков', value: data.overview.issueCount }
+		{ label: 'Выпусков', value: data.overview.issueCount },
+		{ label: 'Комментариев', value: data.comments }
 	]);
 </script>
 
@@ -21,7 +22,7 @@
 	<a class="btn-primary" href="/admin/series/new">+ Новая серия</a>
 </div>
 
-<div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+<div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
 	{#each stats as s}
 		<div class="rounded-lg border border-surface-border bg-surface-raised p-4">
 			<div class="text-2xl font-bold text-slate-100">{compact(s.value)}</div>
