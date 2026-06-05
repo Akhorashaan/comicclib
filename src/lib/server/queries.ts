@@ -217,6 +217,25 @@ export function getSeriesDetail(slug: string): SeriesDetail | null {
 	};
 }
 
+export interface RecentRelease {
+	coverPath: string;
+	seriesSlug: string;
+	seriesTitle: string;
+}
+
+/** Latest added releases that have a cover, for the dashboard shelf. */
+export function getRecentReleaseCovers(limit = 10): RecentRelease[] {
+	return db
+		.prepare(
+			`SELECT i.cover_path AS coverPath, s.slug AS seriesSlug, s.title AS seriesTitle
+			FROM issues i JOIN series s ON s.id = i.series_id
+			WHERE i.cover_path IS NOT NULL
+			ORDER BY i.created_at DESC, i.id DESC
+			LIMIT ?`
+		)
+		.all(limit) as RecentRelease[];
+}
+
 export function getSeriesDetailById(id: number): SeriesDetail | null {
 	const row = db.prepare('SELECT slug FROM series WHERE id = ?').get(id) as
 		| { slug: string }

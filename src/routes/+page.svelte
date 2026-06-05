@@ -6,6 +6,7 @@
 	import Pagination from '$lib/components/Pagination.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import SeriesDetailView from '$lib/components/SeriesDetailView.svelte';
+	import LazyImg from '$lib/components/LazyImg.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -31,6 +32,22 @@
 <svelte:head>
 	<title>Лонгбокс — каталог комиксов</title>
 </svelte:head>
+
+{#if data.recentReleases.length}
+	<section class="mb-6">
+		<h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">Свежие релизы</h2>
+		<div class="flex gap-3 overflow-x-auto pb-2">
+			{#each data.recentReleases as r, i (i)}
+				<a href="/series/{r.seriesSlug}" class="group w-24 shrink-0 sm:w-28" title={r.seriesTitle}>
+					<div class="aspect-[2/3] overflow-hidden rounded-lg border border-surface-border bg-surface-raised">
+						<LazyImg path={r.coverPath} alt={r.seriesTitle} class="transition duration-300 group-hover:scale-[1.04]" />
+					</div>
+					<div class="mt-1 truncate text-xs text-slate-400 group-hover:text-indigo-300">{r.seriesTitle}</div>
+				</a>
+			{/each}
+		</div>
+	</section>
+{/if}
 
 <section class="space-y-4">
 	<Filters options={data.filters} />

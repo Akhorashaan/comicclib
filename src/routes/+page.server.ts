@@ -1,4 +1,9 @@
-import { listSeries, getFilterOptions, type ListParams } from '$lib/server/queries';
+import {
+	listSeries,
+	getFilterOptions,
+	getRecentReleaseCovers,
+	type ListParams
+} from '$lib/server/queries';
 import { SORTS, type Sort } from '$lib/constants';
 import type { PageServerLoad } from './$types';
 
@@ -19,5 +24,5 @@ export const load: PageServerLoad = ({ url, setHeaders }) => {
 	// Short shared cache: cheap relief for a small server, fresh enough for a catalog.
 	setHeaders({ 'cache-control': 'public, max-age=15' });
 
-	return { ...result, filters: getFilterOptions() };
+	return { ...result, filters: getFilterOptions(), recentReleases: getRecentReleaseCovers(10) };
 };
