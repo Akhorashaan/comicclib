@@ -38,11 +38,17 @@
 		<h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">Свежие релизы</h2>
 		<div class="flex gap-3 overflow-x-auto pb-2">
 			{#each data.recentReleases as r, i (i)}
+				{@const caption =
+					r.kind === 'volume'
+						? `Том ${r.number}`
+						: r.kind === 'oneshot'
+							? r.seriesTitle
+							: `Вып. ${r.number}`}
 				<a href="/series/{r.seriesSlug}" class="group w-24 shrink-0 sm:w-28" title={r.seriesTitle}>
 					<div class="aspect-[2/3] overflow-hidden rounded-lg border border-surface-border bg-surface-raised">
 						<LazyImg path={r.coverPath} alt={r.seriesTitle} class="transition duration-300 group-hover:scale-[1.04]" />
 					</div>
-					<div class="mt-1 truncate text-xs text-slate-400 group-hover:text-indigo-300">{r.seriesTitle}</div>
+					<div class="mt-1 truncate text-center text-xs text-slate-400 group-hover:text-indigo-300">{caption}</div>
 				</a>
 			{/each}
 		</div>

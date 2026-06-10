@@ -28,7 +28,7 @@
 		class="relative aspect-[2/3] overflow-hidden rounded-lg border border-surface-border bg-surface-raised"
 	>
 		<LazyImg path={series.coverPath} alt={series.title} class="transition duration-300 group-hover:scale-[1.04]" />
-		<div class="absolute left-2 top-2">
+		<div class="absolute left-2 top-2 rounded-full bg-black/55 shadow-sm shadow-black/40 backdrop-blur-sm">
 			<StatusBadge status={series.status} />
 		</div>
 		{#if series.views > 0}

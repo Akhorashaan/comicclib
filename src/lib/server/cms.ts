@@ -101,7 +101,10 @@ export function deleteSeries(id: number) {
 	const issueCovers = db
 		.prepare('SELECT cover_path AS c FROM issues WHERE series_id = ? AND cover_path IS NOT NULL')
 		.all(id) as { c: string }[];
-	db.prepare('DELETE FROM series WHERE id = ?').run(id); // cascades to issues/authors
+	// Remove analytics events too, so deleted series don't linger as orphaned
+	// rows (series_id → NULL) that inflate totals.
+	db.prepare('DELETE FROM events WHERE series_id = ?').run(id);
+	db.prepare('DELETE FROM series WHERE id = ?').run(id); // cascades to issues/authors/comments
 	if (row?.coverPath) void deleteCover(row.coverPath);
 	for (const r of issueCovers) void deleteCover(r.c);
 }
@@ -170,6 +173,7 @@ export function deleteIssue(id: number) {
 	const row = db.prepare('SELECT cover_path AS c FROM issues WHERE id = ?').get(id) as
 		| { c: string | null }
 		| undefined;
+	db.prepare('DELETE FROM events WHERE issue_id = ?').run(id); // drop this issue's download events
 	db.prepare('DELETE FROM issues WHERE id = ?').run(id);
 	if (row?.c) void deleteCover(row.c);
 }

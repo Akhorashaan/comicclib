@@ -16,6 +16,12 @@
 		{ label: 'Скачивания', value: data.overview.downloads },
 		{ label: 'Уник. посетители', value: data.overview.uniqueVisitors }
 	]);
+
+	// "Остальные" — то, что не вошло в топ-15, чтобы суммы сходились с итогами.
+	const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
+	const otherViews = $derived(Math.max(0, data.overview.views - sum(data.topSeries.map((s) => s.views))));
+	const otherSeriesDl = $derived(Math.max(0, data.overview.downloads - sum(data.topSeries.map((s) => s.downloads))));
+	const otherIssueDl = $derived(Math.max(0, data.overview.downloads - sum(data.topIssues.map((i) => i.downloads))));
 </script>
 
 <svelte:head><title>CMS — Аналитика</title></svelte:head>
@@ -63,6 +69,13 @@
 					{:else}
 						<tr><td colspan="3" class="px-3 py-6 text-center text-slate-500">Нет данных за период.</td></tr>
 					{/each}
+					{#if data.topSeries.length && (otherViews > 0 || otherSeriesDl > 0)}
+						<tr class="bg-surface-raised/30 italic text-slate-500">
+							<td class="px-3 py-2">Остальные серии</td>
+							<td class="px-3 py-2 text-right">{compact(otherViews)}</td>
+							<td class="px-3 py-2 text-right">{compact(otherSeriesDl)}</td>
+						</tr>
+					{/if}
 				</tbody>
 			</table>
 		</div>
@@ -87,6 +100,12 @@
 					{:else}
 						<tr><td colspan="2" class="px-3 py-6 text-center text-slate-500">Нет данных за период.</td></tr>
 					{/each}
+					{#if data.topIssues.length && otherIssueDl > 0}
+						<tr class="bg-surface-raised/30 italic text-slate-500">
+							<td class="px-3 py-2">Остальные выпуски</td>
+							<td class="px-3 py-2 text-right">{compact(otherIssueDl)}</td>
+						</tr>
+					{/if}
 				</tbody>
 			</table>
 		</div>

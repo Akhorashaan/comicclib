@@ -221,13 +221,15 @@ export interface RecentRelease {
 	coverPath: string;
 	seriesSlug: string;
 	seriesTitle: string;
+	kind: ReleaseKind;
+	number: string;
 }
 
 /** Latest added releases that have a cover, for the dashboard shelf. */
 export function getRecentReleaseCovers(limit = 10): RecentRelease[] {
 	return db
 		.prepare(
-			`SELECT i.cover_path AS coverPath, s.slug AS seriesSlug, s.title AS seriesTitle
+			`SELECT i.cover_path AS coverPath, i.kind, i.number, s.slug AS seriesSlug, s.title AS seriesTitle
 			FROM issues i JOIN series s ON s.id = i.series_id
 			WHERE i.cover_path IS NOT NULL
 			ORDER BY i.created_at DESC, i.id DESC
