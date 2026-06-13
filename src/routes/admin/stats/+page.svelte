@@ -47,8 +47,10 @@
 	{/each}
 </div>
 
-<div class="mt-4">
-	<MiniChart data={data.series} />
+<div class="mt-4 grid gap-3 lg:grid-cols-3">
+	<MiniChart data={data.series} metric="views" label="Заходы" color="#818cf8" />
+	<MiniChart data={data.series} metric="uniques" label="Уник. посетители" color="#34d399" />
+	<MiniChart data={data.series} metric="downloads" label="Скачивания" color="#38bdf8" />
 </div>
 
 <div class="mt-6 grid gap-5 lg:grid-cols-2">

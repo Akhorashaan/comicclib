@@ -134,6 +134,7 @@ export function getTopIssues(days: number, limit = 15): TopIssueRow[] {
 export interface DayPoint {
 	day: string;
 	views: number;
+	uniques: number;
 	downloads: number;
 }
 
@@ -143,19 +144,25 @@ export function getTimeseries(days: number): DayPoint[] {
 		.prepare(
 			`SELECT date(created_at) AS day,
 				SUM(type = 'series_view') AS views,
+				COUNT(DISTINCT visitor) AS uniques,
 				SUM(type = 'download_click') AS downloads
 			FROM events
 			WHERE created_at >= datetime('now', ?)
 			GROUP BY day`
 		)
-		.all(`-${days} days`) as { day: string; views: number; downloads: number }[];
+		.all(`-${days} days`) as { day: string; views: number; uniques: number; downloads: number }[];
 
 	const byDay = new Map(rows.map((r) => [r.day, r]));
 	const out: DayPoint[] = [];
 	for (let i = days - 1; i >= 0; i--) {
 		const day = db.prepare(`SELECT date('now', ?) AS d`).get(`-${i} days`) as { d: string };
 		const hit = byDay.get(day.d);
-		out.push({ day: day.d, views: hit?.views ?? 0, downloads: hit?.downloads ?? 0 });
+		out.push({
+			day: day.d,
+			views: hit?.views ?? 0,
+			uniques: hit?.uniques ?? 0,
+			downloads: hit?.downloads ?? 0
+		});
 	}
 	return out;
 }

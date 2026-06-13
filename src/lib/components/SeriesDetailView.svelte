@@ -59,6 +59,7 @@
 				: `#${issue.number}`}
 	<a
 		href="/api/dl/{issue.id}"
+		target="_blank"
 		rel="nofollow noopener"
 		data-sveltekit-reload
 		class="group block"
@@ -157,7 +158,7 @@
 		{#if oneshots.length}
 			<div class="mt-6 flex flex-wrap gap-2">
 				{#each oneshots as o (o.id)}
-					<a class="btn-primary" href="/api/dl/{o.id}" rel="nofollow noopener" data-sveltekit-reload>
+					<a class="btn-primary" href="/api/dl/{o.id}" target="_blank" rel="nofollow noopener" data-sveltekit-reload>
 						⬇ Скачать
 					</a>
 				{/each}
