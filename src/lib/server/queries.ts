@@ -225,13 +225,14 @@ export interface RecentRelease {
 	number: string;
 }
 
-/** Latest added releases that have a cover, for the dashboard shelf. */
+/** Latest added releases for the dashboard shelf; falls back to the series cover
+ *  so coverless releases (typically oneshots) still appear. */
 export function getRecentReleaseCovers(limit = 10): RecentRelease[] {
 	return db
 		.prepare(
-			`SELECT i.cover_path AS coverPath, i.kind, i.number, s.slug AS seriesSlug, s.title AS seriesTitle
+			`SELECT COALESCE(i.cover_path, s.cover_path) AS coverPath, i.kind, i.number, s.slug AS seriesSlug, s.title AS seriesTitle
 			FROM issues i JOIN series s ON s.id = i.series_id
-			WHERE i.cover_path IS NOT NULL
+			WHERE COALESCE(i.cover_path, s.cover_path) IS NOT NULL
 			ORDER BY i.created_at DESC, i.id DESC
 			LIMIT ?`
 		)
