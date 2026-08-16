@@ -15,7 +15,18 @@
 	<a href="/series/{data.series.slug}" class="text-sm text-indigo-400 hover:text-indigo-300" target="_blank">Открыть на сайте ↗</a>
 </div>
 
-<h1 class="mb-1 text-xl font-bold text-slate-100">{data.series.title}</h1>
+<div class="mb-1 flex flex-wrap items-center gap-3">
+	<h1 class="text-xl font-bold text-slate-100">{data.series.title}</h1>
+	{#if data.series.hidden}
+		<span class="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-300">Скрыта</span>
+	{/if}
+	<form method="POST" action="?/toggleSeriesHidden" use:enhance class="ml-auto">
+		<input type="hidden" name="hidden" value={data.series.hidden ? '0' : '1'} />
+		<button class="btn-ghost px-3 py-1 text-xs" type="submit">
+			{data.series.hidden ? '👁 Показать серию' : '🚫 Скрыть серию'}
+		</button>
+	</form>
+</div>
 {#if form?.saved}<p class="mb-3 text-sm text-emerald-400">Сохранено.</p>{/if}
 
 <AdminSeriesForm
@@ -58,7 +69,7 @@
 			action="?/updateIssue"
 			enctype="multipart/form-data"
 			use:enhance
-			class="flex flex-wrap items-start gap-3 rounded-lg border border-surface-border p-2"
+			class="flex flex-wrap items-start gap-3 rounded-lg border p-2 {issue.hidden ? 'border-amber-500/30 bg-amber-500/[0.03]' : 'border-surface-border'}"
 		>
 			<input type="hidden" name="issueId" value={issue.id} />
 			<!-- cover thumbnail -->
@@ -86,14 +97,28 @@
 				{/if}
 			</div>
 			<!-- actions -->
-			<div class="flex gap-1">
-				<button class="btn-ghost px-2 py-1 text-xs" type="submit">💾</button>
-				<button
-					class="btn-ghost px-2 py-1 text-xs text-rose-400"
-					type="submit"
-					formaction="?/deleteIssue"
-					onclick={(e) => { if (!confirm('Удалить этот релиз?')) e.preventDefault(); }}
-				>🗑</button>
+			<div class="flex flex-col gap-1">
+				{#if issue.hidden}
+					<span class="text-center text-[10px] font-medium text-amber-400">скрыт</span>
+				{/if}
+				<div class="flex gap-1">
+					<button class="btn-ghost px-2 py-1 text-xs" type="submit" title="Сохранить">💾</button>
+					<button
+						class="btn-ghost px-2 py-1 text-xs"
+						type="submit"
+						name="hidden"
+						value={issue.hidden ? '0' : '1'}
+						formaction="?/toggleIssueHidden"
+						title={issue.hidden ? 'Показать релиз' : 'Скрыть релиз'}
+					>{issue.hidden ? '👁' : '🚫'}</button>
+					<button
+						class="btn-ghost px-2 py-1 text-xs text-rose-400"
+						type="submit"
+						formaction="?/deleteIssue"
+						onclick={(e) => { if (!confirm('Удалить этот релиз?')) e.preventDefault(); }}
+						title="Удалить"
+					>🗑</button>
+				</div>
 			</div>
 		</form>
 	{:else}

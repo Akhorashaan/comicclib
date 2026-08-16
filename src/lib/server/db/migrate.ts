@@ -27,10 +27,14 @@ export function applySchema(sqlite: Database) {
 	addColumnIfMissing(sqlite, 'issues', 'kind', `kind TEXT NOT NULL DEFAULT 'issue'`);
 	addColumnIfMissing(sqlite, 'issues', 'collects', `collects TEXT`);
 	addColumnIfMissing(sqlite, 'issues', 'cover_path', `cover_path TEXT`);
+	// Draft flag: hide a series or a single release from the public site.
+	addColumnIfMissing(sqlite, 'series', 'hidden', `hidden INTEGER NOT NULL DEFAULT 0`);
+	addColumnIfMissing(sqlite, 'issues', 'hidden', `hidden INTEGER NOT NULL DEFAULT 0`);
 
 	// Indexes on migrated columns — created here, after the columns exist.
 	sqlite.exec(`
 		CREATE INDEX IF NOT EXISTS idx_series_universe ON series(universe_id);
+		CREATE INDEX IF NOT EXISTS idx_series_hidden ON series(hidden);
 		CREATE INDEX IF NOT EXISTS idx_issues_series ON issues(series_id, kind, sort_index);
 	`);
 

@@ -31,11 +31,13 @@ CREATE TABLE IF NOT EXISTS series (
 	universe_id    INTEGER REFERENCES universes(id) ON DELETE SET NULL,
 	status         TEXT NOT NULL DEFAULT 'ongoing',
 	year           INTEGER,
+	hidden         INTEGER NOT NULL DEFAULT 0, -- 1 = черновик, не показывается на сайте
 	created_at     TEXT NOT NULL DEFAULT (datetime('now')),
 	updated_at     TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_series_publisher ON series(publisher_id);
 CREATE INDEX IF NOT EXISTS idx_series_status ON series(status);
+CREATE INDEX IF NOT EXISTS idx_series_hidden ON series(hidden);
 -- idx_series_universe is created in migrate.ts (universe_id may be a migrated column).
 
 CREATE TABLE IF NOT EXISTS series_authors (
@@ -56,6 +58,7 @@ CREATE TABLE IF NOT EXISTS issues (
 	cover_path   TEXT,                          -- per-release cover (filename under DATA_DIR/covers)
 	download_url TEXT NOT NULL,
 	sort_index   REAL NOT NULL DEFAULT 0,       -- numeric ordering helper
+	hidden       INTEGER NOT NULL DEFAULT 0,    -- 1 = черновик, не показывается на сайте
 	created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 -- idx_issues_series is created in migrate.ts (kind may be a migrated column).

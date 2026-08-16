@@ -169,6 +169,62 @@ export function updateIssue(id: number, input: IssueInput) {
 	if (old?.c && old.c !== input.coverPath) void deleteCover(old.c);
 }
 
+/** Toggle a series' draft flag (hidden = not shown anywhere on the public site). */
+export function setSeriesHidden(id: number, hidden: boolean) {
+	db.prepare(`UPDATE series SET hidden = ?, updated_at = datetime('now') WHERE id = ?`).run(
+		hidden ? 1 : 0,
+		id
+	);
+}
+
+/** Toggle a single release's draft flag (hidden = not listed inside the series). */
+export function setIssueHidden(id: number, hidden: boolean) {
+	db.prepare(`UPDATE issues SET hidden = ? WHERE id = ?`).run(hidden ? 1 : 0, id);
+	db.prepare(
+		`UPDATE series SET updated_at = datetime('now') WHERE id = (SELECT series_id FROM issues WHERE id = ?)`
+	).run(id);
+}
+
+export interface HiddenSeriesRow {
+	id: number;
+	title: string;
+	slug: string;
+	status: string;
+	issueCount: number;
+}
+
+export interface HiddenIssueRow {
+	id: number;
+	seriesId: number;
+	seriesTitle: string;
+	kind: ReleaseKind;
+	number: string;
+	title: string;
+}
+
+/** Drafts overview for the admin "Скрытые" page. */
+export function listHiddenSeries(): HiddenSeriesRow[] {
+	return db
+		.prepare(
+			`SELECT s.id, s.title, s.slug, s.status,
+				(SELECT COUNT(*) FROM issues i WHERE i.series_id = s.id) AS issueCount
+			FROM series s WHERE s.hidden = 1 ORDER BY s.updated_at DESC`
+		)
+		.all() as HiddenSeriesRow[];
+}
+
+/** Hidden releases whose parent series is itself visible (otherwise the whole series is hidden). */
+export function listHiddenIssues(): HiddenIssueRow[] {
+	return db
+		.prepare(
+			`SELECT i.id, i.series_id AS seriesId, s.title AS seriesTitle, i.kind, i.number, i.title
+			FROM issues i JOIN series s ON s.id = i.series_id
+			WHERE i.hidden = 1 AND s.hidden = 0
+			ORDER BY s.title COLLATE NOCASE, i.sort_index`
+		)
+		.all() as HiddenIssueRow[];
+}
+
 export function deleteIssue(id: number) {
 	const row = db.prepare('SELECT cover_path AS c FROM issues WHERE id = ?').get(id) as
 		| { c: string | null }

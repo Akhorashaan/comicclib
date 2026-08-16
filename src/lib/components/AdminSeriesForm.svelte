@@ -132,17 +132,19 @@
 		</div>
 
 		<div>
-			<span class="mb-1 block text-xs text-slate-400">Обложка</span>
-			{#if series?.coverPath}
+			<span class="mb-1 block text-xs text-slate-400">Обложка (запасная)</span>
+			{#if series?.storedCoverPath}
 				<div class="mb-2 aspect-[2/3] w-28 overflow-hidden rounded border border-surface-border">
-					<img src={coverUrl(series.coverPath)} alt="" class="h-full w-full object-cover" />
+					<img src={coverUrl(series.storedCoverPath)} alt="" class="h-full w-full object-cover" />
 				</div>
 				<label class="flex items-center gap-2 text-xs text-slate-400">
 					<input type="checkbox" name="removeCover" /> Удалить обложку
 				</label>
 			{/if}
 			<input class="input mt-2" name="cover" type="file" accept="image/*" />
-			<p class="mt-1 text-[11px] text-slate-600">JPG/PNG/WebP — будет сжата в WebP.</p>
+			<p class="mt-1 text-[11px] text-slate-600">
+				На сайте обложкой серии служит обложка ваншота или последнего релиза. Эта — запасная, если у релизов обложек нет.
+			</p>
 		</div>
 
 		<button class="btn-primary w-full" type="submit" disabled={submitting}>

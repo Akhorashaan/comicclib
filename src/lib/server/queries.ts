@@ -27,6 +27,7 @@ export interface IssueRow {
 	collects: string | null;
 	coverPath: string | null;
 	downloadUrl: string;
+	hidden: boolean;
 }
 
 export interface SeriesDetail {
@@ -35,7 +36,8 @@ export interface SeriesDetail {
 	titleOriginal: string;
 	slug: string;
 	description: string;
-	coverPath: string | null;
+	coverPath: string | null; // effective cover shown on the site (oneshot/latest release, else stored)
+	storedCoverPath: string | null; // the series' own uploaded cover (fallback), for the admin form
 	status: Status;
 	year: number | null;
 	publisher: { name: string; slug: string } | null;
@@ -45,6 +47,7 @@ export interface SeriesDetail {
 	comments: CommentRow[];
 	views: number;
 	downloads: number;
+	hidden: boolean;
 }
 
 export interface ListParams {
@@ -82,6 +85,20 @@ const ORDER_BY: Record<Sort, string> = {
 	year: 's.year IS NULL, s.year DESC, s.title COLLATE NOCASE ASC'
 };
 
+/**
+ * Effective series cover (SQL expression against alias `s`): a oneshot's cover,
+ * otherwise the latest release's cover, falling back to the stored series cover.
+ * Pass includeHidden=true (admin) to also consider hidden releases.
+ */
+function coverExpr(includeHidden: boolean): string {
+	const vis = includeHidden ? '' : 'AND i.hidden = 0';
+	return `COALESCE((
+		SELECT i.cover_path FROM issues i
+		WHERE i.series_id = s.id AND i.cover_path IS NOT NULL ${vis}
+		ORDER BY (i.kind = 'oneshot') DESC, i.created_at DESC, i.id DESC LIMIT 1
+	), s.cover_path)`;
+}
+
 export function listSeries(params: ListParams): ListResult {
 	const where: string[] = [];
 	const args: unknown[] = [];
@@ -109,6 +126,7 @@ export function listSeries(params: ListParams): ListResult {
 		where.push('s.id IN (SELECT rowid FROM series_fts WHERE series_fts MATCH ?)');
 		args.push(fts);
 	}
+	where.push('s.hidden = 0'); // drafts never show in the public catalog
 
 	const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 	const sort: Sort = params.sort ?? 'recent';
@@ -125,14 +143,15 @@ export function listSeries(params: ListParams): ListResult {
 	const items = db
 		.prepare(
 			`SELECT
-				s.id, s.title, s.title_original AS titleOriginal, s.slug, s.status, s.year, s.cover_path AS coverPath,
+				s.id, s.title, s.title_original AS titleOriginal, s.slug, s.status, s.year,
+				${coverExpr(false)} AS coverPath,
 				p.name AS publisherName, p.slug AS publisherSlug,
 				u.name AS universeName, u.slug AS universeSlug,
 				(SELECT GROUP_CONCAT(name, ', ') FROM (
 					SELECT DISTINCT a.name FROM series_authors sa
 					JOIN authors a ON a.id = sa.author_id
 					WHERE sa.series_id = s.id ORDER BY a.name)) AS authors,
-				(SELECT COUNT(*) FROM issues i WHERE i.series_id = s.id) AS issueCount,
+				(SELECT COUNT(*) FROM issues i WHERE i.series_id = s.id AND i.hidden = 0) AS issueCount,
 				(SELECT COUNT(*) FROM events e WHERE e.series_id = s.id AND e.type = 'series_view') AS views
 			FROM series s
 			${joins}
@@ -145,11 +164,14 @@ export function listSeries(params: ListParams): ListResult {
 	return { items, total, page, pageCount: Math.max(1, Math.ceil(total / PAGE_SIZE)) };
 }
 
-export function getSeriesDetail(slug: string): SeriesDetail | null {
+export function getSeriesDetail(
+	slug: string,
+	{ includeHidden = false }: { includeHidden?: boolean } = {}
+): SeriesDetail | null {
 	const row = db
 		.prepare(
 			`SELECT s.id, s.title, s.title_original AS titleOriginal, s.slug, s.description,
-				s.cover_path AS coverPath, s.status, s.year,
+				${coverExpr(includeHidden)} AS coverPath, s.cover_path AS storedCoverPath, s.status, s.year, s.hidden,
 				p.name AS publisherName, p.slug AS publisherSlug,
 				u.name AS universeName, u.slug AS universeSlug
 			FROM series s
@@ -165,8 +187,10 @@ export function getSeriesDetail(slug: string): SeriesDetail | null {
 				slug: string;
 				description: string;
 				coverPath: string | null;
+				storedCoverPath: string | null;
 				status: Status;
 				year: number | null;
+				hidden: number;
 				publisherName: string | null;
 				publisherSlug: string | null;
 				universeName: string | null;
@@ -174,6 +198,7 @@ export function getSeriesDetail(slug: string): SeriesDetail | null {
 		  }
 		| undefined;
 	if (!row) return null;
+	if (row.hidden && !includeHidden) return null; // draft series are hidden from the public
 
 	const authors = db
 		.prepare(
@@ -183,12 +208,15 @@ export function getSeriesDetail(slug: string): SeriesDetail | null {
 		)
 		.all(row.id) as { name: string; slug: string; role: AuthorRole }[];
 
-	const issues = db
-		.prepare(
-			`SELECT id, kind, number, title, collects, cover_path AS coverPath, download_url AS downloadUrl
-			FROM issues WHERE series_id = ? ORDER BY kind ASC, sort_index ASC, id ASC`
-		)
-		.all(row.id) as IssueRow[];
+	const issues = (
+		db
+			.prepare(
+				`SELECT id, kind, number, title, collects, cover_path AS coverPath, download_url AS downloadUrl, hidden
+				FROM issues WHERE series_id = ? ${includeHidden ? '' : 'AND hidden = 0'}
+				ORDER BY kind ASC, sort_index ASC, id ASC`
+			)
+			.all(row.id) as (Omit<IssueRow, 'hidden'> & { hidden: number })[]
+	).map((i) => ({ ...i, hidden: !!i.hidden }));
 
 	const counts = db
 		.prepare(
@@ -205,6 +233,7 @@ export function getSeriesDetail(slug: string): SeriesDetail | null {
 		slug: row.slug,
 		description: row.description,
 		coverPath: row.coverPath,
+		storedCoverPath: row.storedCoverPath,
 		status: row.status,
 		year: row.year,
 		publisher: row.publisherSlug ? { name: row.publisherName!, slug: row.publisherSlug } : null,
@@ -213,7 +242,8 @@ export function getSeriesDetail(slug: string): SeriesDetail | null {
 		issues,
 		comments: listCommentsForSeries(row.id),
 		views: counts.views,
-		downloads: counts.downloads
+		downloads: counts.downloads,
+		hidden: !!row.hidden
 	};
 }
 
@@ -233,6 +263,7 @@ export function getRecentReleaseCovers(limit = 10): RecentRelease[] {
 			`SELECT COALESCE(i.cover_path, s.cover_path) AS coverPath, i.kind, i.number, s.slug AS seriesSlug, s.title AS seriesTitle
 			FROM issues i JOIN series s ON s.id = i.series_id
 			WHERE COALESCE(i.cover_path, s.cover_path) IS NOT NULL
+				AND i.hidden = 0 AND s.hidden = 0
 			ORDER BY i.created_at DESC, i.id DESC
 			LIMIT ?`
 		)
@@ -243,7 +274,7 @@ export function getSeriesDetailById(id: number): SeriesDetail | null {
 	const row = db.prepare('SELECT slug FROM series WHERE id = ?').get(id) as
 		| { slug: string }
 		| undefined;
-	return row ? getSeriesDetail(row.slug) : null;
+	return row ? getSeriesDetail(row.slug, { includeHidden: true }) : null;
 }
 
 export interface FilterOptions {
@@ -257,19 +288,20 @@ export function getFilterOptions(): FilterOptions {
 	const publishers = db
 		.prepare(
 			`SELECT DISTINCT p.name, p.slug FROM publishers p
-			JOIN series s ON s.publisher_id = p.id ORDER BY p.name COLLATE NOCASE`
+			JOIN series s ON s.publisher_id = p.id AND s.hidden = 0 ORDER BY p.name COLLATE NOCASE`
 		)
 		.all() as { name: string; slug: string }[];
 	const universes = db
 		.prepare(
 			`SELECT DISTINCT u.name, u.slug FROM universes u
-			JOIN series s ON s.universe_id = u.id ORDER BY u.name COLLATE NOCASE`
+			JOIN series s ON s.universe_id = u.id AND s.hidden = 0 ORDER BY u.name COLLATE NOCASE`
 		)
 		.all() as { name: string; slug: string }[];
 	const authors = db
 		.prepare(
 			`SELECT DISTINCT a.name, a.slug FROM authors a
-			JOIN series_authors sa ON sa.author_id = a.id ORDER BY a.name COLLATE NOCASE`
+			JOIN series_authors sa ON sa.author_id = a.id
+			JOIN series s ON s.id = sa.series_id AND s.hidden = 0 ORDER BY a.name COLLATE NOCASE`
 		)
 		.all() as { name: string; slug: string }[];
 	return { publishers, universes, authors };

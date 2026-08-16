@@ -4,7 +4,8 @@ import { logEvent, visitorId, isExcludedIp } from '$lib/server/analytics';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = ({ params, request, getClientAddress, setHeaders, locals }) => {
-	const series = getSeriesDetail(params.slug);
+	// Admins can preview drafts (hidden series/releases); the public gets a 404.
+	const series = getSeriesDetail(params.slug, { includeHidden: locals.isAdmin });
 	if (!series) throw error(404, 'Серия не найдена');
 
 	let ip: string | null = null;

@@ -5,7 +5,9 @@ import {
 	nameOptions,
 	addIssue,
 	updateIssue,
-	deleteIssue
+	deleteIssue,
+	setSeriesHidden,
+	setIssueHidden
 } from '$lib/server/cms';
 import { parseSeriesForm, parseIssueForm } from '$lib/server/forms';
 import type { Actions, PageServerLoad } from './$types';
@@ -63,5 +65,19 @@ export const actions: Actions = {
 		const issueId = Number(data.get('issueId'));
 		if (Number.isInteger(issueId)) deleteIssue(issueId);
 		return { issueDeleted: true };
+	},
+
+	toggleSeriesHidden: async ({ request, params }) => {
+		const id = requireId(params);
+		const data = await request.formData();
+		setSeriesHidden(id, data.get('hidden') === '1');
+		return { saved: true };
+	},
+
+	toggleIssueHidden: async ({ request }) => {
+		const data = await request.formData();
+		const issueId = Number(data.get('issueId'));
+		if (Number.isInteger(issueId)) setIssueHidden(issueId, data.get('hidden') === '1');
+		return { issueSaved: true };
 	}
 };
