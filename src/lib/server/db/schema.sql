@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS series (
 );
 CREATE INDEX IF NOT EXISTS idx_series_publisher ON series(publisher_id);
 CREATE INDEX IF NOT EXISTS idx_series_status ON series(status);
-CREATE INDEX IF NOT EXISTS idx_series_hidden ON series(hidden);
+-- idx_series_hidden is created in migrate.ts (hidden may be a migrated column).
 -- idx_series_universe is created in migrate.ts (universe_id may be a migrated column).
 
 CREATE TABLE IF NOT EXISTS series_authors (
