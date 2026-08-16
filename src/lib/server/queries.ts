@@ -166,12 +166,20 @@ export function listSeries(params: ListParams): ListResult {
 
 export function getSeriesDetail(
 	slug: string,
-	{ includeHidden = false }: { includeHidden?: boolean } = {}
+	{
+		includeHidden = false,
+		includeHiddenIssues = includeHidden
+	}: {
+		/** Allow loading a hidden (draft) series instead of returning null (admin preview). */
+		includeHidden?: boolean;
+		/** Include hidden releases in the list/cover. Defaults to includeHidden. */
+		includeHiddenIssues?: boolean;
+	} = {}
 ): SeriesDetail | null {
 	const row = db
 		.prepare(
 			`SELECT s.id, s.title, s.title_original AS titleOriginal, s.slug, s.description,
-				${coverExpr(includeHidden)} AS coverPath, s.cover_path AS storedCoverPath, s.status, s.year, s.hidden,
+				${coverExpr(includeHiddenIssues)} AS coverPath, s.cover_path AS storedCoverPath, s.status, s.year, s.hidden,
 				p.name AS publisherName, p.slug AS publisherSlug,
 				u.name AS universeName, u.slug AS universeSlug
 			FROM series s
@@ -212,7 +220,7 @@ export function getSeriesDetail(
 		db
 			.prepare(
 				`SELECT id, kind, number, title, collects, cover_path AS coverPath, download_url AS downloadUrl, hidden
-				FROM issues WHERE series_id = ? ${includeHidden ? '' : 'AND hidden = 0'}
+				FROM issues WHERE series_id = ? ${includeHiddenIssues ? '' : 'AND hidden = 0'}
 				ORDER BY kind ASC, sort_index ASC, id ASC`
 			)
 			.all(row.id) as (Omit<IssueRow, 'hidden'> & { hidden: number })[]
