@@ -127,8 +127,8 @@ function sortIndexOf(number: string): number {
 export function addIssue(seriesId: number, input: IssueInput): number {
 	const info = db
 		.prepare(
-			`INSERT INTO issues (series_id, kind, number, title, collects, cover_path, download_url, sort_index)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+			`INSERT INTO issues (series_id, kind, number, title, collects, cover_path, download_url, sort_index, published_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
 		)
 		.run(
 			seriesId,
@@ -179,7 +179,10 @@ export function setSeriesHidden(id: number, hidden: boolean) {
 
 /** Toggle a single release's draft flag (hidden = not listed inside the series). */
 export function setIssueHidden(id: number, hidden: boolean) {
-	db.prepare(`UPDATE issues SET hidden = ? WHERE id = ?`).run(hidden ? 1 : 0, id);
+	// Publishing a draft is a new release event, so it belongs on the fresh-releases shelf.
+	db.prepare(
+		`UPDATE issues SET hidden = ?, published_at = CASE WHEN ? = 0 THEN datetime('now') ELSE published_at END WHERE id = ?`
+	).run(hidden ? 1 : 0, hidden ? 1 : 0, id);
 	db.prepare(
 		`UPDATE series SET updated_at = datetime('now') WHERE id = (SELECT series_id FROM issues WHERE id = ?)`
 	).run(id);

@@ -30,12 +30,16 @@ export function applySchema(sqlite: Database) {
 	// Draft flag: hide a series or a single release from the public site.
 	addColumnIfMissing(sqlite, 'series', 'hidden', `hidden INTEGER NOT NULL DEFAULT 0`);
 	addColumnIfMissing(sqlite, 'issues', 'hidden', `hidden INTEGER NOT NULL DEFAULT 0`);
+	// Existing releases retain their original release date; publishing a draft refreshes it.
+	addColumnIfMissing(sqlite, 'issues', 'published_at', `published_at TEXT`);
+	sqlite.exec(`UPDATE issues SET published_at = created_at WHERE published_at IS NULL`);
 
 	// Indexes on migrated columns — created here, after the columns exist.
 	sqlite.exec(`
 		CREATE INDEX IF NOT EXISTS idx_series_universe ON series(universe_id);
 		CREATE INDEX IF NOT EXISTS idx_series_hidden ON series(hidden);
 		CREATE INDEX IF NOT EXISTS idx_issues_series ON issues(series_id, kind, sort_index);
+		CREATE INDEX IF NOT EXISTS idx_issues_published ON issues(hidden, published_at DESC);
 	`);
 
 	// The FTS index gained a title_original column — rebuild it on older DBs.

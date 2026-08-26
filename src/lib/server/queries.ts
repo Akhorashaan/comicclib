@@ -272,7 +272,7 @@ export function getRecentReleaseCovers(limit = 10): RecentRelease[] {
 			FROM issues i JOIN series s ON s.id = i.series_id
 			WHERE COALESCE(i.cover_path, s.cover_path) IS NOT NULL
 				AND i.hidden = 0 AND s.hidden = 0
-			ORDER BY i.created_at DESC, i.id DESC
+			ORDER BY i.published_at DESC, i.id DESC
 			LIMIT ?`
 		)
 		.all(limit) as RecentRelease[];

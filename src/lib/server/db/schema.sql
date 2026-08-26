@@ -59,7 +59,8 @@ CREATE TABLE IF NOT EXISTS issues (
 	download_url TEXT NOT NULL,
 	sort_index   REAL NOT NULL DEFAULT 0,       -- numeric ordering helper
 	hidden       INTEGER NOT NULL DEFAULT 0,    -- 1 = черновик, не показывается на сайте
-	created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+	created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+	published_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 -- idx_issues_series is created in migrate.ts (kind may be a migrated column).
 
